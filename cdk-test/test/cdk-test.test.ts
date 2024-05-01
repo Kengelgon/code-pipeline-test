@@ -34,13 +34,7 @@ const buildProject = new codebuild.PipelineProject(stack, 'MyBuildProject', {
                     'ng build'
                 ],
             },
-        },
-        artifacts: {
-            'base-directory': 'build',
-            files: [
-                // Add your artifact files here
-            ],
-        },
+        }
     }),
 });
 
