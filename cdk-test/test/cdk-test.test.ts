@@ -1,17 +1,72 @@
-// import * as cdk from 'aws-cdk-lib';
-// import { Template } from 'aws-cdk-lib/assertions';
-// import * as CdkTest from '../lib/cdk-test-stack';
+import * as cdk from 'aws-cdk-lib';
+import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
+import * as codepipelineActions from 'aws-cdk-lib/aws-codepipeline-actions';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 
-// example test. To run these tests, uncomment this file along with the
-// example resource in lib/cdk-test-stack.ts
-test('SQS Queue Created', () => {
-//   const app = new cdk.App();
-//     // WHEN
-//   const stack = new CdkTest.CdkTestStack(app, 'MyTestStack');
-//     // THEN
-//   const template = Template.fromStack(stack);
+const app = new cdk.App();
+const stack = new cdk.Stack(app, 'Github-Test-Stack');
 
-//   template.hasResourceProperties('AWS::SQS::Queue', {
-//     VisibilityTimeout: 300
-//   });
+// Define the GitHub source action
+const sourceOutput = new codepipeline.Artifact();
+const sourceAction = new codepipelineActions.GitHubSourceAction({
+    actionName: 'GitHub_Source',
+    owner: 'kengelgon',
+    repo: 'code-pipeline-test', // Replace with your repository name
+    branch: 'main',
+    oauthToken: cdk.SecretValue.secretsManager('github-oauth'),
+    output: sourceOutput,
 });
+
+// Define the CodeBuild build action
+const buildProject = new codebuild.PipelineProject(stack, 'GithubTest', {
+    // Define your build project configuration
+});
+
+const buildAction = new codepipelineActions.CodeBuildAction({
+    actionName: 'CodeBuild',
+    project: buildProject,
+    input: sourceOutput,
+    outputs: [/* Specify any additional outputs if needed */],
+});
+
+// Define the CodePipeline
+const pipeline = new codepipeline.Pipeline(stack, 'MyPipeline', {
+    pipelineName: 'MyPipeline',
+    stages: [
+        {
+            stageName: 'Source',
+            actions: [sourceAction],
+        },
+        {
+            stageName: 'Build',
+            actions: [buildAction],
+        },
+        // Add more stages as needed
+    ],
+});
+
+// Grant necessary permissions to the pipeline
+pipeline.addToRolePolicy(new iam.PolicyStatement({
+    actions: ['codebuild:StartBuild'],
+    resources: [buildProject.projectArn],
+}));
+
+// Create an event rule to trigger the pipeline on GitHub repository updates
+const eventRule = new events.Rule(stack, 'GitHubEventRule', {
+    eventPattern: {
+        source: ['aws.codecommit'],
+        detailType: ['CodeCommit Repository State Change'],
+        detail: {
+            event: ['referenceCreated', 'referenceUpdated'],
+            referenceType: ['branch'],
+            referenceName: ['your-github-branch'],
+        },
+    },
+});
+
+eventRule.addTarget(new targets.CodePipeline(pipeline));
+
+app.synth();
