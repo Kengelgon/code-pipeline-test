@@ -75,7 +75,7 @@ const eventRule = new events.Rule(stack, 'GitHubEventRule', {
         detail: {
             event: ['referenceCreated', 'referenceUpdated'],
             referenceType: ['branch'],
-            referenceName: ['your-github-branch'],
+            referenceName: ['main'],
         },
     },
 });
