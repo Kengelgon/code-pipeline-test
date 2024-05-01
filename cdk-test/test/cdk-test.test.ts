@@ -21,8 +21,27 @@ const sourceAction = new codepipelineActions.GitHubSourceAction({
 });
 
 // Define the CodeBuild build action
-const buildProject = new codebuild.PipelineProject(stack, 'GithubTest', {
+const buildProject = new codebuild.PipelineProject(stack, 'MyBuildProject', {
     // Define your build project configuration
+    projectName: 'test-app',
+    buildSpec: codebuild.BuildSpec.fromObject({
+        version: '0.2',
+        phases: {
+            build: {
+                commands: [
+                    'npm install -g @angular/cli',
+                    'npm install',
+                    'ng build'
+                ],
+            },
+        },
+        artifacts: {
+            'base-directory': 'build',
+            files: [
+                // Add your artifact files here
+            ],
+        },
+    }),
 });
 
 const buildAction = new codepipelineActions.CodeBuildAction({
